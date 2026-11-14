@@ -60,15 +60,19 @@ fn main() -> Result<(), Error> {
 
     let mut outputs = Vec::new();
     for provider in providers.iter().map(|p| p.as_ref()) {
-        let balance = provider.fetch_balance()?;
-        let consumption = state.update(
-            provider.id(),
-            BalanceSnapshot {
-                timestamp: Utc::now(),
-                available: balance.available,
-            },
-        );
-        outputs.push(provider_output(provider, &balance, &consumption));
+        match provider.fetch_balance() {
+            Ok(balance) => {
+                let consumption = state.update(
+                    provider.id(),
+                    BalanceSnapshot {
+                        timestamp: Utc::now(),
+                        available: balance.available,
+                    },
+                );
+                outputs.push(provider_output(provider, &balance, &consumption));
+            }
+            Err(e) => outputs.push(error_output(provider, e)),
+        }
     }
     state.save(&state_path);
 
@@ -111,6 +115,14 @@ fn provider_output(provider: &dyn Provider, balance: &Balance, consumption: &Con
             format_amount(consumption.today, balance.currency),
             format_amount(consumption.total, balance.currency)
         ),
+    }
+}
+
+fn error_output(provider: &dyn Provider, error: Error) -> ProviderOutput {
+    ProviderOutput {
+        id: provider.id(),
+        text: format!("{} ?", provider.icon_markup()),
+        tooltip: format!("{}\nError: {}", provider.label(), error),
     }
 }
 
@@ -225,6 +237,19 @@ mod tests {
         assert!(combined.text.contains("$5.00"));
         assert_eq!(combined.tooltip, "Kimi details\n\nOpenAI details");
         assert_eq!(combined.class, "kimi-balance openai-balance");
+    }
+
+    #[test]
+    fn error_output_shows_icon_and_message() {
+        let provider = TestProvider {
+            id: "deepseek",
+            label: "DeepSeek",
+        };
+        let output = error_output(&provider, Error::MissingApiKey("DEEPSEEK_API_KEY".into()));
+        assert!(output.text.contains(r#"font_family="AI Provider Logos""#));
+        assert!(output.text.contains('?'));
+        assert!(output.tooltip.contains("DeepSeek"));
+        assert!(output.tooltip.contains("DEEPSEEK_API_KEY"));
     }
 
     fn parse_mode_from(args: &[&str]) -> Mode {
