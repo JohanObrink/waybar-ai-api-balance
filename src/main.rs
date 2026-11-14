@@ -55,11 +55,17 @@ fn main() -> Result<(), Error> {
         .map(build)
         .collect::<Result<Vec<_>, _>>()?;
     let mode = parse_mode();
+    let provider_filter = parse_provider_filter(env::args().skip(1));
     let state_path = state_path();
     let mut state = State::load(&state_path);
 
     let mut outputs = Vec::new();
     for provider in providers.iter().map(|p| p.as_ref()) {
+        if let Some(ref filter) = provider_filter {
+            if provider.id() != filter {
+                continue;
+            }
+        }
         match provider.fetch_balance() {
             Ok(balance) => {
                 let consumption = state.update(
@@ -102,6 +108,15 @@ fn parse_mode() -> Mode {
     } else {
         Mode::Waybar
     }
+}
+
+fn parse_provider_filter<I: Iterator<Item = String>>(mut args: I) -> Option<String> {
+    while let Some(arg) = args.next() {
+        if arg == "--provider" {
+            return args.next();
+        }
+    }
+    None
 }
 
 fn provider_output(provider: &dyn Provider, balance: &Balance, consumption: &Consumption) -> ProviderOutput {
@@ -260,5 +275,31 @@ mod tests {
         } else {
             Mode::Waybar
         }
+    }
+
+    fn provider_filter_from(args: &[&str]) -> Option<String> {
+        parse_provider_filter(args.iter().map(|s| s.to_string()))
+    }
+
+    #[test]
+    fn no_provider_filter_by_default() {
+        assert!(provider_filter_from(&[]).is_none());
+    }
+
+    #[test]
+    fn parses_provider_filter() {
+        assert_eq!(
+            provider_filter_from(&["--provider", "kimi"]).as_deref(),
+            Some("kimi")
+        );
+    }
+
+    #[test]
+    fn provider_filter_works_alongside_notify() {
+        assert_eq!(parse_mode_from(&["--notify", "--provider", "deepseek"]), Mode::Notify);
+        assert_eq!(
+            provider_filter_from(&["--notify", "--provider", "deepseek"]).as_deref(),
+            Some("deepseek")
+        );
     }
 }
