@@ -37,12 +37,11 @@ pub trait Provider {
 pub fn icon_glyph(provider_id: &str) -> Option<&'static str> {
     match provider_id {
         "kimi" => Some("\u{E000}"),
-        "moonshotai" => Some("\u{E001}"),
-        "deepseek" => Some("\u{E002}"),
-        "claude" => Some("\u{E003}"),
-        "anthropic" => Some("\u{E004}"),
-        "ollama" => Some("\u{E005}"),
-        "openrouter" => Some("\u{E006}"),
+        "deepseek" => Some("\u{E001}"),
+        "claude" => Some("\u{E002}"),
+        "anthropic" => Some("\u{E003}"),
+        "ollama" => Some("\u{E004}"),
+        "openrouter" => Some("\u{E005}"),
         _ => None,
     }
 }
@@ -110,9 +109,9 @@ mod tests {
     #[test]
     fn known_providers_have_icon_glyph() {
         assert_eq!(icon_glyph("kimi"), Some("\u{E000}"));
-        assert_eq!(icon_glyph("deepseek"), Some("\u{E002}"));
-        assert_eq!(icon_glyph("ollama"), Some("\u{E005}"));
-        assert_eq!(icon_glyph("openrouter"), Some("\u{E006}"));
+        assert_eq!(icon_glyph("deepseek"), Some("\u{E001}"));
+        assert_eq!(icon_glyph("ollama"), Some("\u{E004}"));
+        assert_eq!(icon_glyph("openrouter"), Some("\u{E005}"));
     }
 
     #[test]

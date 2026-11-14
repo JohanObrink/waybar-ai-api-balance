@@ -8,12 +8,11 @@ const svg2ttf = require('svg2ttf');
 // widget uses in its config and CSS class names.
 const icons = [
   { slug: 'kimi', name: 'kimi', codepoint: 0xE000 },
-  { slug: 'moonshot', name: 'moonshotai', codepoint: 0xE001 },
-  { slug: 'deepseek', name: 'deepseek', codepoint: 0xE002 },
-  { slug: 'claude', name: 'claude', codepoint: 0xE003 },
-  { slug: 'anthropic', name: 'anthropic', codepoint: 0xE004 },
-  { slug: 'ollama', name: 'ollama', codepoint: 0xE005 },
-  { slug: 'openrouter', name: 'openrouter', codepoint: 0xE006 },
+  { slug: 'deepseek', name: 'deepseek', codepoint: 0xE001 },
+  { slug: 'claude', name: 'claude', codepoint: 0xE002 },
+  { slug: 'anthropic', name: 'anthropic', codepoint: 0xE003 },
+  { slug: 'ollama', name: 'ollama', codepoint: 0xE004 },
+  { slug: 'openrouter', name: 'openrouter', codepoint: 0xE005 },
 ];
 
 const iconBase = path.join(__dirname, '..', 'node_modules/@lobehub/icons-static-svg/icons');

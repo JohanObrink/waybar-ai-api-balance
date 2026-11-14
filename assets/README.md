@@ -17,12 +17,11 @@ npm run build-font
 | Provider   | LobeHub id  | Codepoint |
 |------------|-------------|-----------|
 | Kimi       | `kimi`      | `U+E000`  |
-| MoonshotAI | `moonshot`  | `U+E001`  |
-| DeepSeek   | `deepseek`  | `U+E002`  |
-| Claude     | `claude`    | `U+E003`  |
-| Anthropic  | `anthropic` | `U+E004`  |
-| Ollama     | `ollama`    | `U+E005`  |
-| OpenRouter | `openrouter`| `U+E006`  |
+| DeepSeek   | `deepseek`  | `U+E001`  |
+| Claude     | `claude`    | `U+E002`  |
+| Anthropic  | `anthropic` | `U+E003`  |
+| Ollama     | `ollama`    | `U+E004`  |
+| OpenRouter | `openrouter`| `U+E005`  |
 
 To install the font locally:
 
