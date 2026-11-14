@@ -36,7 +36,7 @@ const fontStream = new svgicons2svgfont.SVGIcons2SVGFontStream({
   // Center glyphs on the text baseline. The default descent of 0 puts the
   // baseline at the bottom of the em square, making every icon float above
   // the surrounding text.
-  descent: 500,
+  descent: 700,
   log: () => {},
 });
 
