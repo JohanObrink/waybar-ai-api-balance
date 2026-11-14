@@ -1,4 +1,5 @@
 use std::env;
+use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -9,6 +10,8 @@ enum Error {
     MissingApiKey,
     #[error("request failed: {0}")]
     Request(#[from] reqwest::Error),
+    #[error("notification failed")]
+    Notification,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,11 +28,33 @@ struct Balance {
     currency: Currency,
 }
 
+impl Balance {
+    fn available_text(&self) -> String {
+        format_amount(self.available, self.currency)
+    }
+
+    fn details(&self, provider_name: &str) -> String {
+        format!(
+            "{}\nAvailable: {}\nCash: {}\nVoucher: {}",
+            provider_name,
+            self.available_text(),
+            format_amount(self.cash, self.currency),
+            format_amount(self.voucher, self.currency)
+        )
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct WaybarOutput {
     text: String,
     tooltip: String,
     class: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Waybar,
+    Notify,
 }
 
 fn main() -> Result<(), Error> {
@@ -41,11 +66,25 @@ fn main() -> Result<(), Error> {
         .as_deref()
         .and_then(parse_currency)
         .unwrap_or_else(|| infer_currency(&base_url));
+    let mode = parse_mode();
 
     let balance = fetch_balance(&base_url, &api_key, currency)?;
-    let output = format_waybar(balance, "Moonshot API");
-    println!("{}", serde_json::to_string(&output).unwrap());
+    let provider_name = "Moonshot API";
+
+    match mode {
+        Mode::Waybar => print_waybar(balance, provider_name),
+        Mode::Notify => send_notification(balance, provider_name)?,
+    }
+
     Ok(())
+}
+
+fn parse_mode() -> Mode {
+    if env::args().any(|arg| arg == "--notify") {
+        Mode::Notify
+    } else {
+        Mode::Waybar
+    }
 }
 
 fn fetch_balance(base_url: &str, api_key: &str, currency: Currency) -> Result<Balance, Error> {
@@ -85,17 +124,26 @@ impl MoonshotBalanceResponse {
 
 fn format_waybar(balance: Balance, provider_name: &str) -> WaybarOutput {
     WaybarOutput {
-        text: format!(
-            "󰚩 {}",
-            format_amount(balance.available, balance.currency)
-        ),
-        tooltip: format!(
-            "{}\nCash: {}\nVoucher: {}",
-            provider_name,
-            format_amount(balance.cash, balance.currency),
-            format_amount(balance.voucher, balance.currency)
-        ),
+        text: balance.available_text(),
+        tooltip: balance.details(provider_name),
         class: "moonshot-balance".to_string(),
+    }
+}
+
+fn print_waybar(balance: Balance, provider_name: &str) {
+    println!("{}", serde_json::to_string(&format_waybar(balance, provider_name)).unwrap());
+}
+
+fn send_notification(balance: Balance, provider_name: &str) -> Result<(), Error> {
+    let status = Command::new("notify-send")
+        .arg(provider_name)
+        .arg(balance.details(provider_name))
+        .status()
+        .map_err(|_| Error::Notification)?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::Notification)
     }
 }
 
@@ -175,11 +223,31 @@ mod tests {
             currency: Currency::Usd,
         };
         let output = format_waybar(balance, "Moonshot API");
-        assert_eq!(output.text, "󰚩 $42.15");
+        assert_eq!(output.text, "$42.15");
         assert_eq!(
             output.tooltip,
-            "Moonshot API\nCash: $42.15\nVoucher: $0.00"
+            "Moonshot API\nAvailable: $42.15\nCash: $42.15\nVoucher: $0.00"
         );
         assert_eq!(output.class, "moonshot-balance");
+    }
+
+    #[test]
+    fn parses_waybar_mode_by_default() {
+        assert_eq!(parse_mode_from(&[]), Mode::Waybar);
+    }
+
+    #[test]
+    fn parses_notify_mode_from_flag() {
+        assert_eq!(parse_mode_from(&["--notify"]), Mode::Notify);
+    }
+
+    fn parse_mode_from(args: &[&str]) -> Mode {
+        let mut collected: Vec<String> = vec!["waybar-ai-api-balance".into()];
+        collected.extend(args.iter().map(|s| s.to_string()));
+        if collected.iter().any(|arg| arg == "--notify") {
+            Mode::Notify
+        } else {
+            Mode::Waybar
+        }
     }
 }

@@ -14,11 +14,13 @@ export MOONSHOT_API_KEY="sk-..."
 waybar-ai-api-balance
 ```
 
-It prints Waybar JSON:
+It prints Waybar JSON showing the available balance:
 
 ```json
-{"text":"󰚩 $42.15","tooltip":"Moonshot API\nCash: $42.15\nVoucher: $0.00","class":"moonshot-balance"}
+{"text":"$42.15","tooltip":"Moonshot API\nAvailable: $42.15\nCash: $42.15\nVoucher: $0.00","class":"moonshot-balance"}
 ```
+
+Click the module to open a desktop notification with the full balance details.
 
 ## Waybar configuration
 
@@ -34,8 +36,10 @@ MOONSHOT_API_KEY=sk-...
 "custom/ai-api-balance": {
     "exec": "/home/johan/.local/bin/waybar-ai-api-balance-launch",
     "interval": 60,
+    "return-type": "json",
     "format": "{}",
-    "tooltip": true
+    "tooltip": true,
+    "on-click": "/home/johan/.local/bin/waybar-ai-api-balance-launch --notify"
 }
 ```
 
