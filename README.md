@@ -2,8 +2,9 @@
 
 A small Waybar module for monitoring balances across AI API providers.
 
-Currently only **Moonshot** is implemented. The goal is to keep the code small,
-test-driven, and easy to extend with more providers later.
+The code is structured so adding a new provider means implementing the
+`Provider` trait and adding it to the provider list. Currently only **Kimi**
+(Moonshot API) is implemented.
 
 ## Usage
 
@@ -14,10 +15,10 @@ export MOONSHOT_API_KEY="sk-..."
 waybar-ai-api-balance
 ```
 
-It prints Waybar JSON showing the available balance:
+It prints Waybar JSON with one block per provider:
 
 ```json
-{"text":"$42.15","tooltip":"Moonshot API\nAvailable: $42.15\nToday's consumption: $1.00\nTotal consumption: $5.00","class":"moonshot-balance"}
+{"text":" $42.15","tooltip":"Kimi\nAvailable: $42.15\nToday's consumption: $1.00\nTotal consumption: $5.00","class":"kimi-balance"}
 ```
 
 Consumption is tracked locally by comparing the current balance against the

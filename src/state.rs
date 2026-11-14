@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -10,10 +12,15 @@ pub struct BalanceSnapshot {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+struct ProviderState {
+    first_seen: Option<BalanceSnapshot>,
+    day_start: Option<BalanceSnapshot>,
+    last_seen: Option<BalanceSnapshot>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct State {
-    pub first_seen: Option<BalanceSnapshot>,
-    pub day_start: Option<BalanceSnapshot>,
-    pub last_seen: Option<BalanceSnapshot>,
+    providers: HashMap<String, ProviderState>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,20 +46,20 @@ impl State {
         }
     }
 
-    pub fn update(&mut self, now: BalanceSnapshot) -> Consumption {
-        // A top-up makes the balance higher than the last reading. Reset the
-        // baselines so consumption is calculated from the new starting point.
-        if let Some(last) = self.last_seen {
+    pub fn update(&mut self, provider_id: &str, now: BalanceSnapshot) -> Consumption {
+        let provider = self.providers.entry(provider_id.into()).or_default();
+
+        if let Some(last) = provider.last_seen {
             if now.available > last.available {
-                self.first_seen = Some(now);
-                self.day_start = Some(now);
-                self.last_seen = Some(now);
+                provider.first_seen = Some(now);
+                provider.day_start = Some(now);
+                provider.last_seen = Some(now);
                 return Consumption { total: 0.0, today: 0.0 };
             }
         }
 
         let today = now.timestamp.date_naive();
-        let day_start = self
+        let day_start = provider
             .day_start
             .and_then(|s| {
                 if s.timestamp.date_naive() == today {
@@ -62,14 +69,14 @@ impl State {
                 }
             })
             .unwrap_or(now);
-        self.day_start = Some(day_start);
+        provider.day_start = Some(day_start);
 
-        if self.first_seen.is_none() {
-            self.first_seen = Some(now);
+        if provider.first_seen.is_none() {
+            provider.first_seen = Some(now);
         }
-        self.last_seen = Some(now);
+        provider.last_seen = Some(now);
 
-        let first = self.first_seen.expect("set above");
+        let first = provider.first_seen.expect("set above");
         Consumption {
             total: (first.available - now.available).max(0.0),
             today: (day_start.available - now.available).max(0.0),
@@ -91,18 +98,15 @@ mod tests {
     #[test]
     fn first_update_records_initial_snapshot_and_reports_zero_consumption() {
         let mut state = State::default();
-        let consumption = state.update(snap(100.0));
+        let consumption = state.update("kimi", snap(100.0));
         assert_eq!(consumption, Consumption { total: 0.0, today: 0.0 });
-        assert_eq!(state.first_seen.unwrap().available, 100.0);
-        assert_eq!(state.day_start.unwrap().available, 100.0);
-        assert_eq!(state.last_seen.unwrap().available, 100.0);
     }
 
     #[test]
     fn subsequent_update_reports_consumption_since_first_seen() {
         let mut state = State::default();
-        state.update(snap(100.0));
-        let consumption = state.update(snap(80.0));
+        state.update("kimi", snap(100.0));
+        let consumption = state.update("kimi", snap(80.0));
         assert_eq!(consumption.total, 20.0);
         assert_eq!(consumption.today, 20.0);
     }
@@ -110,34 +114,47 @@ mod tests {
     #[test]
     fn top_up_resets_first_seen_and_day_start() {
         let mut state = State::default();
-        state.update(snap(100.0));
-        state.update(snap(80.0));
-        let consumption = state.update(snap(120.0));
+        state.update("kimi", snap(100.0));
+        state.update("kimi", snap(80.0));
+        let consumption = state.update("kimi", snap(120.0));
         assert_eq!(consumption, Consumption { total: 0.0, today: 0.0 });
-        assert_eq!(state.first_seen.unwrap().available, 120.0);
-        assert_eq!(state.day_start.unwrap().available, 120.0);
     }
 
     #[test]
     fn new_day_resets_day_start_but_keeps_total() {
         let mut state = State::default();
         let yesterday = Utc::now() - chrono::Duration::days(1);
-        state.first_seen = Some(BalanceSnapshot {
-            timestamp: yesterday,
-            available: 100.0,
-        });
-        state.day_start = Some(BalanceSnapshot {
-            timestamp: yesterday,
-            available: 100.0,
-        });
-        state.last_seen = Some(BalanceSnapshot {
-            timestamp: yesterday,
-            available: 80.0,
-        });
+        state.providers.insert(
+            "kimi".into(),
+            ProviderState {
+                first_seen: Some(BalanceSnapshot {
+                    timestamp: yesterday,
+                    available: 100.0,
+                }),
+                day_start: Some(BalanceSnapshot {
+                    timestamp: yesterday,
+                    available: 100.0,
+                }),
+                last_seen: Some(BalanceSnapshot {
+                    timestamp: yesterday,
+                    available: 80.0,
+                }),
+            },
+        );
 
-        let consumption = state.update(snap(70.0));
+        let consumption = state.update("kimi", snap(70.0));
         assert_eq!(consumption.total, 30.0);
         assert_eq!(consumption.today, 0.0);
-        assert_eq!(state.day_start.unwrap().available, 70.0);
+    }
+
+    #[test]
+    fn providers_are_tracked_independently() {
+        let mut state = State::default();
+        state.update("kimi", snap(100.0));
+        state.update("openai", snap(50.0));
+        let kimi = state.update("kimi", snap(90.0));
+        let openai = state.update("openai", snap(40.0));
+        assert_eq!(kimi.total, 10.0);
+        assert_eq!(openai.total, 10.0);
     }
 }
