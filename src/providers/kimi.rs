@@ -43,10 +43,6 @@ impl Provider for KimiProvider {
         "Kimi"
     }
 
-    fn icon(&self) -> &'static str {
-        ""
-    }
-
     fn fetch_balance(&self) -> Result<Balance, Error> {
         let url = format!("{}/users/me/balance", Self::base_url().trim_end_matches('/'));
         let client = reqwest::blocking::Client::new();
@@ -115,6 +111,5 @@ mod tests {
         let p = KimiProvider::new();
         assert_eq!(p.id(), "kimi");
         assert_eq!(p.label(), "Kimi");
-        assert_eq!(p.icon(), "");
     }
 }

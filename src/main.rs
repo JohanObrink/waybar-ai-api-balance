@@ -86,7 +86,7 @@ fn parse_mode() -> Mode {
 fn provider_output(provider: &dyn Provider, balance: &Balance, consumption: &Consumption) -> ProviderOutput {
     ProviderOutput {
         id: provider.id(),
-        text: format!("{} {}", provider.icon(), balance.available_text()),
+        text: format!("{} {}", provider.icon_markup(), balance.available_text()),
         tooltip: format!(
             "{}\nAvailable: {}\nToday's consumption: {}\nTotal consumption: {}",
             provider.label(),
@@ -141,7 +141,6 @@ mod tests {
     struct TestProvider {
         id: &'static str,
         label: &'static str,
-        icon: &'static str,
     }
 
     impl Provider for TestProvider {
@@ -150,9 +149,6 @@ mod tests {
         }
         fn label(&self) -> &'static str {
             self.label
-        }
-        fn icon(&self) -> &'static str {
-            self.icon
         }
         fn fetch_balance(&self) -> Result<Balance, Error> {
             Ok(Balance {
@@ -177,7 +173,6 @@ mod tests {
         let provider = TestProvider {
             id: "kimi",
             label: "Kimi",
-            icon: "",
         };
         let balance = Balance {
             available: 42.0,
@@ -185,7 +180,8 @@ mod tests {
         };
         let consumption = Consumption { today: 1.0, total: 5.0 };
         let output = provider_output(&provider, &balance, &consumption);
-        assert_eq!(output.text, " $42.00");
+        assert!(output.text.contains(r#"font_family="AI Provider Logos""#));
+        assert!(output.text.contains("$42.00"));
         assert!(output.tooltip.contains("Available: $42.00"));
         assert!(output.tooltip.contains("Today's consumption: $1.00"));
         assert!(output.tooltip.contains("Total consumption: $5.00"));
@@ -196,17 +192,20 @@ mod tests {
         let outputs = vec![
             ProviderOutput {
                 id: "kimi",
-                text: " $10.00".into(),
+                text: "<span>kimi-icon</span> $10.00".into(),
                 tooltip: "Kimi details".into(),
             },
             ProviderOutput {
                 id: "openai",
-                text: " $5.00".into(),
+                text: "<span>openai-icon</span> $5.00".into(),
                 tooltip: "OpenAI details".into(),
             },
         ];
         let combined = combine_outputs(outputs);
-        assert_eq!(combined.text, " $10.00   $5.00");
+        assert!(combined.text.contains("kimi-icon"));
+        assert!(combined.text.contains("openai-icon"));
+        assert!(combined.text.contains("$10.00"));
+        assert!(combined.text.contains("$5.00"));
         assert_eq!(combined.tooltip, "Kimi details\n\nOpenAI details");
         assert_eq!(combined.class, "kimi-balance openai-balance");
     }

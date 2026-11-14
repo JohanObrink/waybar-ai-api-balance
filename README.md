@@ -18,13 +18,23 @@ waybar-ai-api-balance
 It prints Waybar JSON with one block per provider:
 
 ```json
-{"text":" $42.15","tooltip":"Kimi\nAvailable: $42.15\nToday's consumption: $1.00\nTotal consumption: $5.00","class":"kimi-balance"}
+{"text":"<span font_family=\"AI Provider Logos\"></span> $42.15","tooltip":"Kimi\nAvailable: $42.15\nToday's consumption: $1.00\nTotal consumption: $5.00","class":"kimi-balance"}
 ```
 
 Consumption is tracked locally by comparing the current balance against the
 first reading and the first reading of the day. A top-up resets both counters.
 
 Click the module to open a desktop notification with the full balance details.
+
+## Install the icon font
+
+The provider logos come from a custom icon font included in this repo:
+
+```bash
+mkdir -p ~/.local/share/fonts
+cp assets/ai-provider-logos.ttf ~/.local/share/fonts/
+fc-cache -f ~/.local/share/fonts
+```
 
 ## Waybar configuration
 
@@ -41,11 +51,15 @@ MOONSHOT_API_KEY=sk-...
     "exec": "/home/johan/.local/bin/waybar-ai-api-balance-launch",
     "interval": 60,
     "return-type": "json",
+    "escape": false,
     "format": "{}",
     "tooltip": true,
     "on-click": "/home/johan/.local/bin/waybar-ai-api-balance-launch --notify"
 }
 ```
+
+`escape: false` is required so Waybar renders the Pango markup that selects
+the custom icon font for the logo.
 
 ## Configuration
 
@@ -60,4 +74,11 @@ MOONSHOT_API_KEY=sk-...
 ```bash
 cargo test
 cargo build --release
+```
+
+To rebuild the logo font after adding a provider:
+
+```bash
+npm install
+npm run build-font
 ```

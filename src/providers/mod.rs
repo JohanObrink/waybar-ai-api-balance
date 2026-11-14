@@ -2,6 +2,8 @@ pub mod kimi;
 
 use crate::Error;
 
+const ICON_FONT_FAMILY: &str = "AI Provider Logos";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Currency {
     Usd,
@@ -23,8 +25,33 @@ impl Balance {
 pub trait Provider {
     fn id(&self) -> &'static str;
     fn label(&self) -> &'static str;
-    fn icon(&self) -> &'static str;
     fn fetch_balance(&self) -> Result<Balance, Error>;
+
+    fn icon_markup(&self) -> String {
+        icon_markup(self.id())
+    }
+}
+
+pub fn icon_glyph(provider_id: &str) -> Option<&'static str> {
+    match provider_id {
+        "kimi" => Some("\u{E000}"),
+        "moonshotai" => Some("\u{E001}"),
+        "deepseek" => Some("\u{E002}"),
+        "claude" => Some("\u{E003}"),
+        "anthropic" => Some("\u{E004}"),
+        "ollama" => Some("\u{E005}"),
+        _ => None,
+    }
+}
+
+pub fn icon_markup(provider_id: &str) -> String {
+    match icon_glyph(provider_id) {
+        Some(glyph) => format!(
+            r#"<span font_family="{}">{}</span>"#,
+            ICON_FONT_FAMILY, glyph
+        ),
+        None => "●".to_string(),
+    }
 }
 
 pub fn format_amount(amount: f64, currency: Currency) -> String {
@@ -42,7 +69,6 @@ mod tests {
     struct TestProvider {
         id: &'static str,
         label: &'static str,
-        icon: &'static str,
     }
 
     impl Provider for TestProvider {
@@ -51,9 +77,6 @@ mod tests {
         }
         fn label(&self) -> &'static str {
             self.label
-        }
-        fn icon(&self) -> &'static str {
-            self.icon
         }
         fn fetch_balance(&self) -> Result<Balance, Error> {
             Ok(Balance {
@@ -68,11 +91,29 @@ mod tests {
         let p = TestProvider {
             id: "kimi",
             label: "Kimi",
-            icon: "",
         };
         assert_eq!(p.id(), "kimi");
         assert_eq!(p.label(), "Kimi");
-        assert_eq!(p.icon(), "");
+    }
+
+    #[test]
+    fn known_providers_have_icon_glyph() {
+        assert_eq!(icon_glyph("kimi"), Some("\u{E000}"));
+        assert_eq!(icon_glyph("deepseek"), Some("\u{E002}"));
+        assert_eq!(icon_glyph("ollama"), Some("\u{E005}"));
+    }
+
+    #[test]
+    fn unknown_provider_falls_back_to_bullet() {
+        assert_eq!(icon_glyph("unknown"), None);
+        assert_eq!(icon_markup("unknown"), "●");
+    }
+
+    #[test]
+    fn icon_markup_uses_custom_font_family() {
+        let markup = icon_markup("kimi");
+        assert!(markup.contains(r#"font_family="AI Provider Logos""#));
+        assert!(markup.contains('\u{E000}'));
     }
 
     #[test]

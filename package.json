@@ -1,0 +1,12 @@
+{
+  "name": "waybar-ai-api-balance-font",
+  "private": true,
+  "scripts": {
+    "build-font": "node scripts/build-font.js"
+  },
+  "devDependencies": {
+    "simple-icons": "^16.37.0",
+    "svg2ttf": "^6.0.3",
+    "svgicons2svgfont": "^14.0.2"
+  }
+}

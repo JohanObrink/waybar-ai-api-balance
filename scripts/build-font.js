@@ -1,0 +1,50 @@
+const fs = require('fs');
+const path = require('path');
+const svgicons2svgfont = require('svgicons2svgfont');
+const svg2ttf = require('svg2ttf');
+
+const icons = [
+  { slug: 'kimi', name: 'kimi', codepoint: 0xE000 },
+  { slug: 'moonshotai', name: 'moonshotai', codepoint: 0xE001 },
+  { slug: 'deepseek', name: 'deepseek', codepoint: 0xE002 },
+  { slug: 'claude', name: 'claude', codepoint: 0xE003 },
+  { slug: 'anthropic', name: 'anthropic', codepoint: 0xE004 },
+  { slug: 'ollama', name: 'ollama', codepoint: 0xE005 },
+];
+
+const sources = icons.map(icon => {
+  const file = path.join(__dirname, '..', 'node_modules/simple-icons/icons', `${icon.slug}.svg`);
+  return {
+    ...icon,
+    stream: fs.createReadStream(file),
+  };
+});
+
+const fontStream = new svgicons2svgfont.SVGIcons2SVGFontStream({
+  fontName: 'AI Provider Logos',
+  fontId: 'ai-provider-logos',
+  normalize: true,
+  centerHorizontally: true,
+  fontHeight: 1000,
+  log: () => {},
+});
+
+let svgFont = '';
+fontStream.on('data', chunk => svgFont += chunk);
+fontStream.on('end', () => {
+  const ttf = svg2ttf(svgFont, {});
+  const output = path.join(__dirname, '..', 'assets/ai-provider-logos.ttf');
+  fs.writeFileSync(output, Buffer.from(ttf.buffer));
+  console.log('Generated', output);
+});
+
+sources.forEach(s => {
+  const glyph = Object.assign(s.stream, {
+    metadata: {
+      unicode: [String.fromCodePoint(s.codepoint)],
+      name: s.name,
+    },
+  });
+  fontStream.write(glyph);
+});
+fontStream.end();
