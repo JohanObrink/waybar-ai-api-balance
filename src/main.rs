@@ -1,3 +1,4 @@
+mod config;
 mod providers;
 mod state;
 
@@ -9,15 +10,19 @@ use chrono::Utc;
 use serde::Serialize;
 use thiserror::Error;
 
-use providers::{format_amount, Balance, Provider};
+use providers::{build, format_amount, Balance, Provider};
 use state::{BalanceSnapshot, Consumption, State};
 
 #[derive(Debug, Error)]
 enum Error {
     #[error("missing API key: set {0}")]
-    MissingApiKey(&'static str),
+    MissingApiKey(String),
+    #[error("unknown provider type: {0}")]
+    UnknownProvider(String),
     #[error("request failed: {0}")]
     Request(#[from] reqwest::Error),
+    #[error("invalid response: {0}")]
+    InvalidResponse(String),
     #[error("notification failed")]
     Notification,
 }
@@ -42,7 +47,13 @@ struct ProviderOutput {
 }
 
 fn main() -> Result<(), Error> {
-    let providers: Vec<Box<dyn Provider>> = vec![Box::new(providers::kimi::KimiProvider::new())];
+    let config_path = config_path();
+    let config = config::Config::load(&config_path);
+    let providers: Vec<Box<dyn Provider>> = config
+        .provider
+        .iter()
+        .map(build)
+        .collect::<Result<Vec<_>, _>>()?;
     let mode = parse_mode();
     let state_path = state_path();
     let mut state = State::load(&state_path);
@@ -67,6 +78,12 @@ fn main() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn config_path() -> PathBuf {
+    dirs::config_dir()
+        .map(|p| p.join("waybar-ai-api-balance/config.toml"))
+        .unwrap_or_else(|| PathBuf::from("/tmp/waybar-ai-api-balance-config.toml"))
 }
 
 fn state_path() -> PathBuf {

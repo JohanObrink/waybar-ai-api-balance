@@ -5,7 +5,7 @@
     "build-font": "node scripts/build-font.js"
   },
   "devDependencies": {
-    "simple-icons": "^16.37.0",
+    "@lobehub/icons-static-svg": "^1.102.0",
     "svg2ttf": "^6.0.3",
     "svgicons2svgfont": "^14.0.2"
   }

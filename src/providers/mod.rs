@@ -1,6 +1,8 @@
+pub mod deepseek;
 pub mod kimi;
 
 use crate::Error;
+use crate::config::ProviderConfig;
 
 const ICON_FONT_FAMILY: &str = "AI Provider Logos";
 
@@ -40,6 +42,7 @@ pub fn icon_glyph(provider_id: &str) -> Option<&'static str> {
         "claude" => Some("\u{E003}"),
         "anthropic" => Some("\u{E004}"),
         "ollama" => Some("\u{E005}"),
+        "openrouter" => Some("\u{E006}"),
         _ => None,
     }
 }
@@ -51,6 +54,14 @@ pub fn icon_markup(provider_id: &str) -> String {
             ICON_FONT_FAMILY, glyph
         ),
         None => "●".to_string(),
+    }
+}
+
+pub fn build(config: &ProviderConfig) -> Result<Box<dyn Provider>, Error> {
+    match config.provider_type.as_str() {
+        "kimi" => Ok(Box::new(kimi::KimiProvider::from_config(config))),
+        "deepseek" => Ok(Box::new(deepseek::DeepSeekProvider::from_config(config))),
+        other => Err(Error::UnknownProvider(other.into())),
     }
 }
 
@@ -101,6 +112,7 @@ mod tests {
         assert_eq!(icon_glyph("kimi"), Some("\u{E000}"));
         assert_eq!(icon_glyph("deepseek"), Some("\u{E002}"));
         assert_eq!(icon_glyph("ollama"), Some("\u{E005}"));
+        assert_eq!(icon_glyph("openrouter"), Some("\u{E006}"));
     }
 
     #[test]

@@ -1,7 +1,9 @@
 # AI Provider Logos font
 
-`ai-provider-logos.ttf` is a minimal icon font built from [Simple Icons](https://simple-icons.org/)
-(CC0-1.0). It contains brand logos for the providers supported by this widget.
+`ai-provider-logos.ttf` is a minimal icon font built from the mono SVGs in
+[@lobehub/icons-static-svg](https://www.npmjs.com/package/@lobehub/icons-static-svg)
+([lobehub.com/icons](https://lobehub.com/icons)). LobeHub maintains accurate,
+up-to-date brand logos for AI providers and models.
 
 To rebuild the font after adding a provider:
 
@@ -12,14 +14,15 @@ npm run build-font
 
 ## Included icons and codepoints
 
-| Provider   | Simple Icons slug | Codepoint |
-|------------|-------------------|-----------|
-| Kimi       | `kimi`            | `U+E000`  |
-| MoonshotAI | `moonshotai`      | `U+E001`  |
-| DeepSeek   | `deepseek`        | `U+E002`  |
-| Claude     | `claude`          | `U+E003`  |
-| Anthropic  | `anthropic`       | `U+E004`  |
-| Ollama     | `ollama`          | `U+E005`  |
+| Provider   | LobeHub id  | Codepoint |
+|------------|-------------|-----------|
+| Kimi       | `kimi`      | `U+E000`  |
+| MoonshotAI | `moonshot`  | `U+E001`  |
+| DeepSeek   | `deepseek`  | `U+E002`  |
+| Claude     | `claude`    | `U+E003`  |
+| Anthropic  | `anthropic` | `U+E004`  |
+| Ollama     | `ollama`    | `U+E005`  |
+| OpenRouter | `openrouter`| `U+E006`  |
 
 To install the font locally:
 

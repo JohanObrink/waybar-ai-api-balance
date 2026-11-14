@@ -3,34 +3,41 @@ use std::env;
 use serde::Deserialize;
 
 use crate::Error;
+use crate::config::ProviderConfig;
 use crate::providers::{Balance, Currency, Provider};
 
 const DEFAULT_BASE_URL: &str = "https://api.moonshot.ai/v1";
-const API_KEY_ENV: &str = "MOONSHOT_API_KEY";
-const BASE_URL_ENV: &str = "MOONSHOT_BASE_URL";
-const CURRENCY_ENV: &str = "MOONSHOT_CURRENCY";
+const DEFAULT_API_KEY_ENV: &str = "MOONSHOT_API_KEY";
 
-pub struct KimiProvider;
+pub struct KimiProvider {
+    api_key_env: String,
+    base_url: String,
+    currency_override: Option<Currency>,
+}
 
 impl KimiProvider {
-    pub fn new() -> Self {
-        Self
+    pub fn from_config(config: &ProviderConfig) -> Self {
+        Self {
+            api_key_env: config
+                .api_key_env
+                .clone()
+                .unwrap_or_else(|| DEFAULT_API_KEY_ENV.into()),
+            base_url: config
+                .base_url
+                .clone()
+                .unwrap_or_else(|| DEFAULT_BASE_URL.into()),
+            currency_override: config.currency.as_deref().and_then(parse_currency),
+        }
     }
 
-    fn base_url() -> String {
-        env::var(BASE_URL_ENV).unwrap_or_else(|_| DEFAULT_BASE_URL.to_string())
+    fn api_key(&self) -> Result<String, Error> {
+        env::var(&self.api_key_env)
+            .map_err(|_| Error::MissingApiKey(self.api_key_env.clone()))
     }
 
-    fn api_key() -> Result<String, Error> {
-        env::var(API_KEY_ENV).map_err(|_| Error::MissingApiKey(API_KEY_ENV))
-    }
-
-    fn currency() -> Currency {
-        env::var(CURRENCY_ENV)
-            .ok()
-            .as_deref()
-            .and_then(parse_currency)
-            .unwrap_or_else(|| infer_currency(&Self::base_url()))
+    fn currency(&self) -> Currency {
+        self.currency_override
+            .unwrap_or_else(|| infer_currency(&self.base_url))
     }
 }
 
@@ -44,17 +51,17 @@ impl Provider for KimiProvider {
     }
 
     fn fetch_balance(&self) -> Result<Balance, Error> {
-        let url = format!("{}/users/me/balance", Self::base_url().trim_end_matches('/'));
+        let url = format!("{}/users/me/balance", self.base_url.trim_end_matches('/'));
         let client = reqwest::blocking::Client::new();
         let response: BalanceResponse = client
             .get(&url)
-            .bearer_auth(Self::api_key()?)
+            .bearer_auth(self.api_key()?)
             .send()?
             .error_for_status()?
             .json()?;
         Ok(Balance {
             available: response.data.available_balance,
-            currency: Self::currency(),
+            currency: self.currency(),
         })
     }
 }
@@ -88,6 +95,19 @@ struct BalanceData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ProviderConfig;
+
+    fn default_config() -> ProviderConfig {
+        ProviderConfig {
+            provider_type: "kimi".into(),
+            id: None,
+            label: None,
+            base_url: None,
+            currency: None,
+            api_key_env: None,
+            management_key_env: None,
+        }
+    }
 
     #[test]
     fn infers_usd_for_international_host() {
@@ -108,8 +128,16 @@ mod tests {
 
     #[test]
     fn provider_identity() {
-        let p = KimiProvider::new();
+        let p = KimiProvider::from_config(&default_config());
         assert_eq!(p.id(), "kimi");
         assert_eq!(p.label(), "Kimi");
+    }
+
+    #[test]
+    fn currency_override_from_config() {
+        let mut config = default_config();
+        config.currency = Some("CNY".into());
+        let p = KimiProvider::from_config(&config);
+        assert_eq!(p.currency(), Currency::Cny);
     }
 }
