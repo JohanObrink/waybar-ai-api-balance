@@ -10,9 +10,8 @@ const icons = [
   { slug: 'kimi', name: 'kimi', codepoint: 0xE000 },
   { slug: 'deepseek', name: 'deepseek', codepoint: 0xE001 },
   { slug: 'claude', name: 'claude', codepoint: 0xE002 },
-  { slug: 'anthropic', name: 'anthropic', codepoint: 0xE003 },
-  { slug: 'ollama', name: 'ollama', codepoint: 0xE004 },
-  { slug: 'openrouter', name: 'openrouter', codepoint: 0xE005 },
+  { slug: 'ollama', name: 'ollama', codepoint: 0xE003 },
+  { slug: 'openrouter', name: 'openrouter', codepoint: 0xE004 },
 ];
 
 const iconBase = path.join(__dirname, '..', 'node_modules/@lobehub/icons-static-svg/icons');

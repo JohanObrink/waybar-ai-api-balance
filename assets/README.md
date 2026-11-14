@@ -19,9 +19,8 @@ npm run build-font
 | Kimi       | `kimi`      | `U+E000`  |
 | DeepSeek   | `deepseek`  | `U+E001`  |
 | Claude     | `claude`    | `U+E002`  |
-| Anthropic  | `anthropic` | `U+E003`  |
-| Ollama     | `ollama`    | `U+E004`  |
-| OpenRouter | `openrouter`| `U+E005`  |
+| Ollama     | `ollama`    | `U+E003`  |
+| OpenRouter | `openrouter`| `U+E004`  |
 
 To install the font locally:
 
