@@ -11,11 +11,6 @@ Set your Moonshot API key:
 
 ```bash
 export MOONSHOT_API_KEY="sk-..."
-```
-
-Run the binary:
-
-```bash
 waybar-ai-api-balance
 ```
 
@@ -27,10 +22,20 @@ It prints Waybar JSON:
 
 ## Waybar configuration
 
+Use the launcher script so the key can live in a file instead of the global
+environment:
+
+```bash
+# ~/.config/waybar-ai-api-balance/env
+MOONSHOT_API_KEY=sk-...
+```
+
 ```jsonc
 "custom/ai-api-balance": {
-    "exec": "waybar-ai-api-balance",
-    "interval": 60
+    "exec": "/home/johan/.local/bin/waybar-ai-api-balance-launch",
+    "interval": 60,
+    "format": "{}",
+    "tooltip": true
 }
 ```
 
