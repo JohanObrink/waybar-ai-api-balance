@@ -85,7 +85,7 @@ provider in its own Waybar module and bind a different click action to each:
     "escape": false,
     "format": "{}",
     "tooltip": true,
-    "on-click": "xdg-open https://platform.kimi.ai"
+    "on-click": "xdg-open https://platform.kimi.ai/console/account"
 },
 "custom/ai-api-balance-deepseek": {
     "exec": "/home/johan/.local/bin/waybar-ai-api-balance-launch --provider deepseek",
@@ -94,7 +94,7 @@ provider in its own Waybar module and bind a different click action to each:
     "escape": false,
     "format": "{}",
     "tooltip": true,
-    "on-click": "xdg-open https://platform.deepseek.com/"
+    "on-click": "xdg-open https://platform.deepseek.com/usage"
 }
 ```
 
