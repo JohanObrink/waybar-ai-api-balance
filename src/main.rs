@@ -1,5 +1,10 @@
+mod state;
+
 use std::env;
+use std::path::PathBuf;
 use std::process::Command;
+
+use chrono::Utc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -33,13 +38,13 @@ impl Balance {
         format_amount(self.available, self.currency)
     }
 
-    fn details(&self, provider_name: &str) -> String {
+    fn details(&self, provider_name: &str, consumption: &state::Consumption) -> String {
         format!(
-            "{}\nAvailable: {}\nCash: {}\nVoucher: {}",
+            "{}\nAvailable: {}\nToday's consumption: {}\nTotal consumption: {}",
             provider_name,
             self.available_text(),
-            format_amount(self.cash, self.currency),
-            format_amount(self.voucher, self.currency)
+            format_amount(consumption.today, self.currency),
+            format_amount(consumption.total, self.currency)
         )
     }
 }
@@ -70,13 +75,26 @@ fn main() -> Result<(), Error> {
 
     let balance = fetch_balance(&base_url, &api_key, currency)?;
     let provider_name = "Moonshot API";
+    let state_path = state_path();
+    let mut state = state::State::load(&state_path);
+    let consumption = state.update(state::BalanceSnapshot {
+        timestamp: Utc::now(),
+        available: balance.available,
+    });
+    state.save(&state_path);
 
     match mode {
-        Mode::Waybar => print_waybar(balance, provider_name),
-        Mode::Notify => send_notification(balance, provider_name)?,
+        Mode::Waybar => print_waybar(balance, &consumption, provider_name),
+        Mode::Notify => send_notification(balance, &consumption, provider_name)?,
     }
 
     Ok(())
+}
+
+fn state_path() -> PathBuf {
+    dirs::state_dir()
+        .map(|p| p.join("waybar-ai-api-balance/state.json"))
+        .unwrap_or_else(|| PathBuf::from("/tmp/waybar-ai-api-balance-state.json"))
 }
 
 fn parse_mode() -> Mode {
@@ -122,22 +140,33 @@ impl MoonshotBalanceResponse {
     }
 }
 
-fn format_waybar(balance: Balance, provider_name: &str) -> WaybarOutput {
+fn format_waybar(
+    balance: Balance,
+    consumption: &state::Consumption,
+    provider_name: &str,
+) -> WaybarOutput {
     WaybarOutput {
         text: balance.available_text(),
-        tooltip: balance.details(provider_name),
+        tooltip: balance.details(provider_name, consumption),
         class: "moonshot-balance".to_string(),
     }
 }
 
-fn print_waybar(balance: Balance, provider_name: &str) {
-    println!("{}", serde_json::to_string(&format_waybar(balance, provider_name)).unwrap());
+fn print_waybar(balance: Balance, consumption: &state::Consumption, provider_name: &str) {
+    println!(
+        "{}",
+        serde_json::to_string(&format_waybar(balance, consumption, provider_name)).unwrap()
+    );
 }
 
-fn send_notification(balance: Balance, provider_name: &str) -> Result<(), Error> {
+fn send_notification(
+    balance: Balance,
+    consumption: &state::Consumption,
+    provider_name: &str,
+) -> Result<(), Error> {
     let status = Command::new("notify-send")
         .arg(provider_name)
-        .arg(balance.details(provider_name))
+        .arg(balance.details(provider_name, consumption))
         .status()
         .map_err(|_| Error::Notification)?;
     if status.success() {
@@ -222,11 +251,15 @@ mod tests {
             voucher: 0.0,
             currency: Currency::Usd,
         };
-        let output = format_waybar(balance, "Moonshot API");
+        let consumption = state::Consumption {
+            today: 1.0,
+            total: 5.0,
+        };
+        let output = format_waybar(balance, &consumption, "Moonshot API");
         assert_eq!(output.text, "$42.15");
         assert_eq!(
             output.tooltip,
-            "Moonshot API\nAvailable: $42.15\nCash: $42.15\nVoucher: $0.00"
+            "Moonshot API\nAvailable: $42.15\nToday's consumption: $1.00\nTotal consumption: $5.00"
         );
         assert_eq!(output.class, "moonshot-balance");
     }

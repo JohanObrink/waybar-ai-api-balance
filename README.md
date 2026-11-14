@@ -17,8 +17,11 @@ waybar-ai-api-balance
 It prints Waybar JSON showing the available balance:
 
 ```json
-{"text":"$42.15","tooltip":"Moonshot API\nAvailable: $42.15\nCash: $42.15\nVoucher: $0.00","class":"moonshot-balance"}
+{"text":"$42.15","tooltip":"Moonshot API\nAvailable: $42.15\nToday's consumption: $1.00\nTotal consumption: $5.00","class":"moonshot-balance"}
 ```
+
+Consumption is tracked locally by comparing the current balance against the
+first reading and the first reading of the day. A top-up resets both counters.
 
 Click the module to open a desktop notification with the full balance details.
 
