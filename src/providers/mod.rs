@@ -16,11 +16,23 @@ pub enum Currency {
 pub struct Balance {
     pub available: f64,
     pub currency: Currency,
+    pub voucher: Option<f64>,
 }
 
 impl Balance {
     pub fn available_text(&self) -> String {
         format_amount(self.available, self.currency)
+    }
+
+    pub fn voucher_text(&self) -> Option<String> {
+        self.voucher.map(|v| format_amount(v, self.currency))
+    }
+
+    pub fn currency_code(&self) -> &'static str {
+        match self.currency {
+            Currency::Usd => "USD",
+            Currency::Cny => "CNY",
+        }
     }
 }
 
@@ -91,6 +103,7 @@ mod tests {
             Ok(Balance {
                 available: 10.0,
                 currency: Currency::Usd,
+                voucher: None,
             })
         }
     }

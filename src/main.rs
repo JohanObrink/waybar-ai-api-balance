@@ -1,17 +1,14 @@
 mod config;
 mod providers;
-mod state;
 
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
-use chrono::Utc;
 use serde::Serialize;
 use thiserror::Error;
 
-use providers::{build, format_amount, Balance, Provider};
-use state::{BalanceSnapshot, Consumption, State};
+use providers::{build, Balance, Provider};
 
 #[derive(Debug, Error)]
 enum Error {
@@ -56,8 +53,6 @@ fn main() -> Result<(), Error> {
         .collect::<Result<Vec<_>, _>>()?;
     let mode = parse_mode();
     let provider_filter = parse_provider_filter(env::args().skip(1));
-    let state_path = state_path();
-    let mut state = State::load(&state_path);
 
     let mut outputs = Vec::new();
     for provider in providers.iter().map(|p| p.as_ref()) {
@@ -67,20 +62,10 @@ fn main() -> Result<(), Error> {
             }
         }
         match provider.fetch_balance() {
-            Ok(balance) => {
-                let consumption = state.update(
-                    provider.id(),
-                    BalanceSnapshot {
-                        timestamp: Utc::now(),
-                        available: balance.available,
-                    },
-                );
-                outputs.push(provider_output(provider, &balance, &consumption));
-            }
+            Ok(balance) => outputs.push(provider_output(provider, &balance)),
             Err(e) => outputs.push(error_output(provider, e)),
         }
     }
-    state.save(&state_path);
 
     match mode {
         Mode::Waybar => println!("{}", serde_json::to_string(&combine_outputs(outputs)).unwrap()),
@@ -94,12 +79,6 @@ fn config_path() -> PathBuf {
     dirs::config_dir()
         .map(|p| p.join("waybar-ai-api-balance/config.toml"))
         .unwrap_or_else(|| PathBuf::from("/tmp/waybar-ai-api-balance-config.toml"))
-}
-
-fn state_path() -> PathBuf {
-    dirs::state_dir()
-        .map(|p| p.join("waybar-ai-api-balance/state.json"))
-        .unwrap_or_else(|| PathBuf::from("/tmp/waybar-ai-api-balance-state.json"))
 }
 
 fn parse_mode() -> Mode {
@@ -119,17 +98,20 @@ fn parse_provider_filter<I: Iterator<Item = String>>(mut args: I) -> Option<Stri
     None
 }
 
-fn provider_output(provider: &dyn Provider, balance: &Balance, consumption: &Consumption) -> ProviderOutput {
+fn provider_output(provider: &dyn Provider, balance: &Balance) -> ProviderOutput {
+    let mut tooltip = format!(
+        "{}\nAvailable: {}\nCurrency: {}",
+        provider.label(),
+        balance.available_text(),
+        balance.currency_code()
+    );
+    if let Some(voucher) = balance.voucher_text() {
+        tooltip.push_str(&format!("\nVoucher: {voucher}"));
+    }
     ProviderOutput {
         id: provider.id(),
         text: format!("{} {}", provider.icon_markup(), balance.available_text()),
-        tooltip: format!(
-            "{}\nAvailable: {}\nToday's consumption: {}\nTotal consumption: {}",
-            provider.label(),
-            balance.available_text(),
-            format_amount(consumption.today, balance.currency),
-            format_amount(consumption.total, balance.currency)
-        ),
+        tooltip,
     }
 }
 
@@ -198,6 +180,7 @@ mod tests {
             Ok(Balance {
                 available: 10.0,
                 currency: providers::Currency::Usd,
+                voucher: None,
             })
         }
     }
@@ -221,14 +204,30 @@ mod tests {
         let balance = Balance {
             available: 42.0,
             currency: providers::Currency::Usd,
+            voucher: None,
         };
-        let consumption = Consumption { today: 1.0, total: 5.0 };
-        let output = provider_output(&provider, &balance, &consumption);
+        let output = provider_output(&provider, &balance);
         assert!(output.text.contains(r#"font_family="AI Provider Logos""#));
         assert!(output.text.contains("$42.00"));
         assert!(output.tooltip.contains("Available: $42.00"));
-        assert!(output.tooltip.contains("Today's consumption: $1.00"));
-        assert!(output.tooltip.contains("Total consumption: $5.00"));
+        assert!(output.tooltip.contains("Currency: USD"));
+        assert!(!output.tooltip.contains("consumption"));
+    }
+
+    #[test]
+    fn provider_output_includes_voucher_when_present() {
+        let provider = TestProvider {
+            id: "kimi",
+            label: "Kimi",
+        };
+        let balance = Balance {
+            available: 18.03,
+            currency: providers::Currency::Usd,
+            voucher: Some(5.0),
+        };
+        let output = provider_output(&provider, &balance);
+        assert!(output.tooltip.contains("Voucher: $5.00"));
+        assert!(!output.tooltip.contains("Cash"));
     }
 
     #[test]

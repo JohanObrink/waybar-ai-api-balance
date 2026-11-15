@@ -62,6 +62,7 @@ impl Provider for KimiProvider {
         Ok(Balance {
             available: response.data.available_balance,
             currency: self.currency(),
+            voucher: Some(response.data.voucher_balance),
         })
     }
 }
@@ -90,6 +91,7 @@ struct BalanceResponse {
 #[derive(Debug, Deserialize)]
 struct BalanceData {
     available_balance: f64,
+    voucher_balance: f64,
 }
 
 #[cfg(test)]

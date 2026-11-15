@@ -75,6 +75,7 @@ impl Provider for DeepSeekProvider {
         Ok(Balance {
             available: info.total().unwrap_or(0.0),
             currency,
+            voucher: None,
         })
     }
 }
