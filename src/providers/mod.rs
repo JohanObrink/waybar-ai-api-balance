@@ -27,13 +27,6 @@ impl Balance {
     pub fn voucher_text(&self) -> Option<String> {
         self.voucher.map(|v| format_amount(v, self.currency))
     }
-
-    pub fn currency_code(&self) -> &'static str {
-        match self.currency {
-            Currency::Usd => "USD",
-            Currency::Cny => "CNY",
-        }
-    }
 }
 
 pub trait Provider {

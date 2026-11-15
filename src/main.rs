@@ -99,12 +99,7 @@ fn parse_provider_filter<I: Iterator<Item = String>>(mut args: I) -> Option<Stri
 }
 
 fn provider_output(provider: &dyn Provider, balance: &Balance) -> ProviderOutput {
-    let mut tooltip = format!(
-        "{}\nAvailable: {}\nCurrency: {}",
-        provider.label(),
-        balance.available_text(),
-        balance.currency_code()
-    );
+    let mut tooltip = format!("{}\nAvailable: {}", provider.label(), balance.available_text());
     if let Some(voucher) = balance.voucher_text() {
         tooltip.push_str(&format!("\nVoucher: {voucher}"));
     }
@@ -210,7 +205,7 @@ mod tests {
         assert!(output.text.contains(r#"font_family="AI Provider Logos""#));
         assert!(output.text.contains("$42.00"));
         assert!(output.tooltip.contains("Available: $42.00"));
-        assert!(output.tooltip.contains("Currency: USD"));
+        assert!(!output.tooltip.contains("Currency"));
         assert!(!output.tooltip.contains("consumption"));
     }
 
